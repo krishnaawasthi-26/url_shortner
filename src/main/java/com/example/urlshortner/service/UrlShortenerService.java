@@ -23,6 +23,13 @@ public class UrlShortenerService {
 
     public UrlMapping createShortUrl(String originalUrl) {
         String normalizedUrl = normalizeUrl(originalUrl);
+
+        Optional<UrlMappingDocument> existingMapping = repository.findByOriginalUrl(normalizedUrl);
+        if (existingMapping.isPresent()) {
+            UrlMappingDocument mapping = existingMapping.get();
+            return new UrlMapping(mapping.getShortCode(), mapping.getOriginalUrl());
+        }
+
         String shortCode = generateUniqueCode();
         repository.save(new UrlMappingDocument(shortCode, normalizedUrl));
         return new UrlMapping(shortCode, normalizedUrl);
