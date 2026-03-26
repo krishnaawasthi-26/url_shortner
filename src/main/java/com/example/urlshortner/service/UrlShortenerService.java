@@ -1,12 +1,12 @@
 package com.example.urlshortner.service;
 
 import com.example.urlshortner.model.UrlMapping;
+import com.example.urlshortner.model.UrlMappingDocument;
+import com.example.urlshortner.repository.UrlMappingRepository;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UrlShortenerService {
@@ -15,17 +15,22 @@ public class UrlShortenerService {
     private static final int SHORT_CODE_LENGTH = 7;
 
     private final SecureRandom random = new SecureRandom();
-    private final Map<String, String> storage = new ConcurrentHashMap<>();
+    private final UrlMappingRepository repository;
+
+    public UrlShortenerService(UrlMappingRepository repository) {
+        this.repository = repository;
+    }
 
     public UrlMapping createShortUrl(String originalUrl) {
         String normalizedUrl = normalizeUrl(originalUrl);
         String shortCode = generateUniqueCode();
-        storage.put(shortCode, normalizedUrl);
+        repository.save(new UrlMappingDocument(shortCode, normalizedUrl));
         return new UrlMapping(shortCode, normalizedUrl);
     }
 
     public Optional<String> getOriginalUrl(String shortCode) {
-        return Optional.ofNullable(storage.get(shortCode));
+        return repository.findById(shortCode)
+                .map(UrlMappingDocument::getOriginalUrl);
     }
 
     private String normalizeUrl(String url) {
@@ -40,7 +45,7 @@ public class UrlShortenerService {
         String code;
         do {
             code = randomCode();
-        } while (storage.containsKey(code));
+        } while (repository.existsById(code));
         return code;
     }
 
