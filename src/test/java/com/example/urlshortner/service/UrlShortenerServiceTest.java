@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UrlShortenerServiceTest {
@@ -25,6 +27,7 @@ class UrlShortenerServiceTest {
         repository = mock(UrlMappingRepository.class);
         service = new UrlShortenerService(repository);
         when(repository.existsById(any())).thenReturn(false);
+        when(repository.findByOriginalUrl(any())).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -45,5 +48,19 @@ class UrlShortenerServiceTest {
         UrlMapping second = service.createShortUrl("https://two.example");
 
         assertNotEquals(first.shortCode(), second.shortCode());
+    }
+
+    @Test
+    void shouldReturnExistingShortUrlForDuplicateOriginalUrl() {
+        UrlMapping first = service.createShortUrl("example.com");
+
+        when(repository.findByOriginalUrl(first.originalUrl()))
+                .thenReturn(Optional.of(new UrlMappingDocument(first.shortCode(), first.originalUrl())));
+
+        UrlMapping second = service.createShortUrl("https://example.com");
+
+        assertEquals(first.shortCode(), second.shortCode());
+        assertEquals(first.originalUrl(), second.originalUrl());
+        verify(repository, times(1)).save(any());
     }
 }
